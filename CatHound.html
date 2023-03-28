@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>CatHound</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <script>
+        var bh_username = "neo4j";
+        var bh_password = "password123"
+        var bh_URL = "http://localhost:7474"
+    </script>
+
+    <div class="p-4">
+
+        <div name="RawData" class="row align-items-start">
+            <div class="me-auto p-2">
+                <button type="button" class="btn btn-primary btn-sm float-end" onclick="Test_Bloodhound_Connection()">Test Bloodhound Connection</button>
+            </div>
+            <div class="col" name="SecretsDump">
+                <label for="SecretsDump_Data" class="form-label">SecretsDump Data</label>
+                <textarea class="form-control" id="SecretsDump_Data" rows="12" style="font-family:lucida console"
+                    wrap="off"></textarea>
+            </div>
+            <div class="col" name="Hashcat Pot">
+                <label for="HashcatPot_data" class="form-label">Hashcat Pot</label>
+                <textarea class="form-control" id="HashcatPot_data" rows="12" style="font-family:lucida console"
+                    wrap="off"></textarea>
+            </div>
+        </div>
+        <div class="p-2">
+            <div>
+                <label for="custom_wordlist" class="form-label">Company Keywords</label>
+                <small>*comma seperated, case insenstive</small>
+            </div>
+            <input type="text" id="custom_wordlist" placeholder="Contoso, ContosoUnlimited, ContosoParis" size="50">
+        </div>
+        <div>
+        </div>
+        <div name="Buttons" class="btn-group p-1">
+            <button type="button" class="btn btn-primary" onclick="start()">Parse</button>
+            <button type="button" class="btn btn-danger" onclick="start_bh()">Parse With Bloodhound</button>
+        </div>
+        <hr class="hr" />
+        <h1>Results</h1>
+        <div>
+            <div name="ReturnData" class="row align-items-start">
+                <div class="col" name="Cracked Users">
+                    <label for="CrackedUsers_data" class="form-label">Cracked Users</label>
+                    <textarea class="form-control" id="CrackedUsers_data" rows="12" style="font-family:lucida console"
+                        wrap="off"></textarea>
+                </div>
+                <div class="col" name="Password Stats">
+                    <label for="Stats_data" class="form-label">Password Stats</label>
+                    <textarea class="form-control" id="Stats_data" rows="12" style="font-family:lucida console"
+                        wrap="off"></textarea>
+                </div>
+                <div class="col" name="User:Pass Pairs">
+                    <label for="UserPassPair_data" class="form-label">User:Pass Pairs</label>
+                    <textarea class="form-control" id="UserPassPair_data" rows="12" style="font-family:lucida console"
+                        wrap="off"></textarea>
+                </div>
+            </div>
+            <div>
+            </div>
+        </div>
+        <script>
+            class SecretsDumpEntry {
+                constructor(domain, user, RID, LMhash, NTHash) {
+                    this.Domain = domain;
+                    this.User = user;
+                    this.RID = RID;
+                    this.LMhash = LMhash;
+                    this.NTHash = NTHash
+                    this.Password = "";
+                }
+            }
+
+            class HashCatPotEntry {
+                constructor(NT, Password) {
+                    this.NT = NT;
+                    this.Password = Password;
+                    this.Count = 0;
+                }
+            }
+
+            //Todo, Maybe use regex for this
+            //Parses a string into a secrets dump array. 
+            function parseSecretsDumpEntry(entrystring) {
+                entryarray = entrystring.split(":")
+                var user = ""
+                var domain = ""
+
+                //If there is no domain, do not attempt to find a domain entry
+                if (entryarray[0].includes("\\")) {
+                    var usplit = entryarray[0].split("\\")
+                    domain = usplit[0]
+                    user = usplit[1]
+                } else {
+                    user = entryarray[0]
+                }
+                var s = new SecretsDumpEntry(domain, user, entryarray[1], entryarray[2], entryarray[3])
+                return s
+            }
+
+            function ValidSecretsDumpString(entrystring) {
+
+            }
+
+
+            function parseSecretsDumpData(data) {
+                var SecretsDumpObjArray = []
+                entries = data.trim().split("\n")
+                for (e in entries) {
+                    SecretsDumpObjArray.push(parseSecretsDumpEntry(entries[e]))
+                }
+                return SecretsDumpObjArray
+            }
+
+            function parseHashcatPotEntry(entrystring) {
+                entryarray = entrystring.split(":")
+                var p = new HashCatPotEntry(entryarray[0], entryarray[1])
+                return p
+            }
+
+            function parseHashCatPotData(data) {
+                var HashCatObjArray = []
+                entries = data.trim().split("\n")
+                for (g in entries) {
+                    HashCatObjArray.push(parseHashcatPotEntry(entries[g]))
+                }
+                return HashCatObjArray
+            }
+
+            function generateResults(SecretsDumpData, HashCatPotData) {
+                HashCatObjArray = parseHashCatPotData(HashCatPotData)
+                SecretsDumpArray = parseSecretsDumpData(SecretsDumpData)
+                for (HCEntry in HashCatObjArray) {
+                    for (SDEntry in SecretsDumpArray) {
+                        if (HashCatObjArray[HCEntry].NT == SecretsDumpArray[SDEntry].NTHash) {
+                            HashCatObjArray[HCEntry].Count++;
+                            SecretsDumpArray[SDEntry].Password = HashCatObjArray[HCEntry].Password
+                        }
+                    }
+                }
+                return [SecretsDumpArray, HashCatObjArray]
+            }
+
+            async function start() {
+                raw_HashCatPot = document.getElementById("HashcatPot_data").value.trim();
+                raw_SecretsDump = document.getElementById("SecretsDump_Data").value.trim();
+                custom_wordlist_string = document.getElementById("custom_wordlist").value.trim();
+                returnData = generateResults(raw_SecretsDump, raw_HashCatPot);
+
+                stats = await generateStats(returnData[0], returnData[1], false, custom_wordlist_string)
+                document.getElementById("Stats_data").value = stats
+                credpair = generateCredPairs(returnData[0])
+                document.getElementById("UserPassPair_data").value = credpair.join('\n')
+                crackedUsers = generateCrackUsers(returnData[0])
+                document.getElementById("CrackedUsers_data").value = crackedUsers.join('\n')
+
+            }
+
+
+            async function start_bh() {
+                raw_HashCatPot = document.getElementById("HashcatPot_data").value.trim();
+                raw_SecretsDump = document.getElementById("SecretsDump_Data").value.trim();
+                custom_wordlist_string = document.getElementById("custom_wordlist").value.trim();
+                returnData = generateResults(raw_SecretsDump, raw_HashCatPot);
+                await BH_MarkedCrackedUsersAsOwned(returnData[0]);
+
+                stats = await generateStats(returnData[0], returnData[1], true, custom_wordlist_string)
+                document.getElementById("Stats_data").value = stats
+                credpair = generateCredPairs(returnData[0])
+                document.getElementById("UserPassPair_data").value = credpair.join('\n')
+                crackedUsers = generateCrackUsers(returnData[0])
+                document.getElementById("CrackedUsers_data").value = crackedUsers.join('\n')
+            }
+
+            // Total Users
+            // Cracked Passwords
+            // Unique Passwords
+            async function generateStats(processed_SecretsDump, processed_HashCatPot, BH_Sync, custom_wordlist) {
+                var total_cracked_uniq_password = 0
+                var total_cracked_users = 0
+                var total_users = 0
+                var user_password_month = []
+                var user_password_custom_wordlist = []
+                var user_password_welcome = []
+                var user_password_password = []
+                var user_password_season = []
+                var user_password_not_uniq = []
+                var NonUniq_Passwords = []
+                var BH_stats = ""
+
+                // Process Hashcat Pot
+                //Remove entries that are $HEX[] format as those are defaults and won't actually work
+                for (HCEntry in processed_HashCatPot) {
+                    if (!processed_HashCatPot[HCEntry].Password.includes("$HEX[")) {
+                        total_cracked_uniq_password++
+
+                        // Get List of Passwords that are used more then once
+                        if (processed_HashCatPot[HCEntry].Count > 1) {
+                            NonUniq_Passwords.push(processed_HashCatPot[HCEntry].Password)
+                        }
+
+                        // TODO, There is logic issue here. Passwords that are not cracked but have been resused can been seen by hashes that are the same.
+                    }
+                }
+
+
+                // Process Dump 
+                for (SDEntry in processed_SecretsDump) {
+                    //No machine accounts
+                    if (processed_SecretsDump[SDEntry].User.includes("$")) {
+                        continue
+                    }
+                    total_users++
+
+                    //No empty passwords or passwords that are not cracked
+                    if (processed_SecretsDump[SDEntry].Password == "") {
+                        continue
+                    }
+                    total_cracked_users++
+
+                    //Users with repeated password that are shared
+                    if (NonUniq_Passwords.includes(processed_SecretsDump[SDEntry].Password)) {
+                        user_password_not_uniq.push(getUserName(processed_SecretsDump[SDEntry]))
+                    }
+
+
+
+                    //Password Modify to get rid of leet speek and uppercase to match for common patterns like password, welcome, month, season, companyname
+                    modifypassword = leetToLowerCase(processed_SecretsDump[SDEntry].Password)
+
+                    var months = ["january", "febuary", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december", "jan", "feb", "mar", "apr", "aug", "sept", "oct", "nov", "dec"]
+                    var season = ["fall", "spring", "summer", "winter"]
+
+                    //Custom Wordlist, this should typically be the company name or some variation of the company name
+                    custom_list_array = custom_wordlist.split(",")
+                    for (x in custom_list_array) {
+                        word = custom_list_array[x].trim().toLowerCase()
+                        if (modifypassword.includes(word)) {
+                            user_password_custom_wordlist.push(getUserName(processed_SecretsDump[SDEntry]))
+                            break
+                        }
+                    }
+
+
+                    if (modifypassword.includes("password")) {
+                        user_password_password.push(getUserName(processed_SecretsDump[SDEntry]))
+                    }
+
+                    if (modifypassword.includes("welcome")) {
+                        user_password_welcome.push(getUserName(processed_SecretsDump[SDEntry]))
+                    }
+
+                    for (m in months) {
+                        if (modifypassword.includes(months[m])) {
+                            user_password_month.push(getUserName(processed_SecretsDump[SDEntry]))
+                            //To catch cases of repetition due to nov being in november.
+                            break
+                        }
+
+                    }
+
+                    for (s in season) {
+                        if (modifypassword.includes(season[s])) {
+                            user_password_season.push(getUserName(processed_SecretsDump[SDEntry]))
+                        }
+                    }
+
+                }
+
+                if (BH_Sync) {
+
+                    BH_Owned_Users = await BH_GetOwnedUsers_HV_Group()
+                    for (x in BH_Owned_Users) {
+                        if (BH_Owned_Users[x][2].length == 0) {
+                            continue
+                        }
+
+                        BH_stats += `\n${BH_Owned_Users[x][0]}:\n${BH_Owned_Users[x][2].join('\n')}\n`
+
+
+                    }
+                }
+
+                user_password_month.sort()
+                user_password_password.sort()
+                user_password_season.sort()
+                user_password_welcome.sort()
+                user_password_not_uniq.sort()
+                user_password_custom_wordlist.sort()
+
+                return `Total Users: ${total_users}
+Total Cracked Users: ${total_cracked_users}
+Total Unique User Passwords: ${total_cracked_uniq_password}
+
+${BH_stats}
+Users with "password" variation in their password:
+${user_password_password.join('\n')}
+    
+Users with "welcome" variation in their password:
+${user_password_welcome.join('\n')}
+    
+Users with season variation in their password:
+${user_password_season.join('\n')}
+    
+Users with month variation in their password:
+${user_password_month.join('\n')}
+
+Users with company name in their passwords:
+${user_password_custom_wordlist.join("\n")}
+
+Users with passwords that are shared with other accounts:
+${user_password_not_uniq.join('\n')}`
+            }
+
+            function generateCredPairs(processed_SecretsDump) {
+                value_data = []
+                for (e in processed_SecretsDump) {
+                    if (processed_SecretsDump[e].Password != "") {
+                        user = ""
+
+                        if (processed_SecretsDump[e].Domain != "") {
+                            user = `${processed_SecretsDump[e].Domain}\\${processed_SecretsDump[e].User}:${processed_SecretsDump[e].Password}`
+                        } else {
+                            user = `${processed_SecretsDump[e].User}:${processed_SecretsDump[e].Password}`
+                        }
+                        value_data.push(user)
+                    }
+                }
+                value_data.sort()
+                return value_data
+
+            }
+
+            function generateCrackUsers(processed_SecretsDump) {
+                var crackedUsers = []
+                for (SDEntry in processed_SecretsDump) {
+                    //No password
+                    if (processed_SecretsDump[SDEntry].Password == "") {
+                        continue
+                    }
+                    // No Machine Accounts
+                    if (processed_SecretsDump[SDEntry].User.includes("$")) {
+                        continue
+                    }
+
+                    //If User has a domain attached, fix formatting
+                    if (processed_SecretsDump[SDEntry].Domain != "") {
+                        user = `${processed_SecretsDump[SDEntry].Domain}\\${processed_SecretsDump[SDEntry].User}`
+                    } else {
+                        user = `${processed_SecretsDump[SDEntry].User}`
+                    }
+                    crackedUsers.push(user)
+
+                }
+                crackedUsers.sort()
+                return crackedUsers
+            }
+
+
+            function leetToLowerCase(str) {
+                // Define the leet speak characters and their lowercase equivalents
+                const leet = {
+                    "4": "a",
+                    "@": "a",
+                    "6": "b",
+                    "8": "b",
+                    "(": "c",
+                    "<": "c",
+                    "3": "e",
+                    "|=": "f",
+                    "6": "g",
+                    "#": "h",
+                    "1": "i",
+                    "_|": "j",
+                    "|<": "k",
+                    "1": "l",
+                    "|\\/|": "m",
+                    "|\\|": "n",
+                    "0": "o",
+                    "|o": "p",
+                    "2": "r",
+                    "5": "s",
+                    "7": "t",
+                    "|_|": "u",
+                    "\\/": "v",
+                    "\\/\\/": "w",
+                    "><": "x",
+                    "`/": "y",
+                    "2": "z",
+                    "{": "c",
+                    "9": "g",
+                    "!": "i",
+                    "9": "q",
+                    "$": "s",
+                    "+": "t",
+                    "%": "x",
+                };
+
+                str = str.toLowerCase()
+
+                Object.keys(leet).forEach((key) => {
+                    str = str.replaceAll(key, leet[key]);
+                })
+
+                return str
+
+            }
+
+
+            function getUserName(SCObj) {
+                var user = ""
+                if (SCObj.Domain != "") {
+                    user = `${SCObj.Domain}\\${SCObj.User}`
+                } else {
+                    user = `${SCObj.User}`
+                }
+
+                return user
+
+            }
+
+            async function BH_MarkedCrackedUsersAsOwned(processed_SecretsDump) {
+
+                var query = { "statements": [] }
+                // (`MATCH (n {samaccountname: '${processed_SecretsDump[i].User}'}) SET n.owned = true, n.password = '${processed_SecretsDump[i].Password}';`)
+
+                for (i in processed_SecretsDump) {
+                    //Skip Users with no password
+                    if (processed_SecretsDump[i].Password == "") {
+                        continue
+                    }
+
+                    //console.log(`MATCH (n {samaccountname: '${processed_SecretsDump[i].User}'}) SET n.owned = true, n.password = '${processed_SecretsDump[i].Password}';`)
+                    query.statements.push({
+                        "statement": (`MATCH (n {samaccountname: '${processed_SecretsDump[i].User}'}) SET n.owned = true, n.password = '${processed_SecretsDump[i].Password}';`),
+                        "parameters": {}
+                    })
+                }
+                var myheader = new Headers
+                myheader.set('Authorization', 'Basic ' + btoa(bh_username + ":" + bh_password));
+                myheader.set("Accept", "application/json;charset=UTF-8")
+                myheader.set("Content-Type", "application/json")
+
+                await fetch(bh_URL + "/db/neo4j/tx/commit", {
+                    method: "POST",
+                    headers: myheader,
+                    body: JSON.stringify(query),
+                    cache: "default"
+                })
+                    .then(function (responce) {
+                        console.log(responce)
+                    }
+                    )
+
+            }
+
+            async function BH_GetOwnedUsers_HV_Group() {
+                // Owned Members of the Domain Admins Group    
+                // MATCH p=(n:Group)<-[:MemberOf*1..]-(m) WHERE n.objectid =~ "(?i)S-1-5-.*-512" AND m.owned = true RETURN m
+
+                // Owned Members of Enterprise Admins Group
+                // MATCH p=(n:Group)<-[:MemberOf*1..]-(m) WHERE n.objectid =~ "(?i)S-1-5-.*-519" AND m.owned = true RETURN m
+
+                // Owned Members of Built It  Admins Group
+                // S-1-5-32-544
+                // MATCH p=(n:Group)<-[:MemberOf*1..]-(m) WHERE n.objectid =~ "(?i).*S-1-5-32-544" AND m.owned = true RETURN m
+                // MATCH p=(n)-[b:MemberOf]->(c:Group {objectid: "(?i).*S-1-5-32-544"}) RETURN n.name, n.domain
+
+                // MATCH (m:User), (n:Group {objectid: "(?i).*S-1-5-32-544"}), p=(m)-[:MemberOf]->(n) RETURN p
+
+
+                // Account Operators that are owned
+                // S-1-5-32-548
+                // MATCH p=(n:Group)<-[:MemberOf*1..]-(m) WHERE n.objectid =~ "(?i).*S-1-5-32-548" AND m.owned = true RETURN m
+
+                // Backup Operators that are owned
+                // S-1-5-32-551
+                // MATCH p=(n:Group)<-[:MemberOf*1..]-(m) WHERE n.objectid =~ "(?i).*S-1-5-32-551" AND m.owned = true RETURN m
+                var query = { "statements": [] }
+                var finaltext = ""
+
+                var groups = [
+                    ["Members of the Domain Admins Group who's passwords were cracked:", 'MATCH p=(n:Group)<-[:MemberOf*1..]-(m) WHERE n.objectid =~ "(?i)S-1-5-.*-512" AND m.owned = true RETURN m.samaccountname, m.domain ORDER BY m.samaccountname', []],
+                    ["Members of the Enterprise Admins Group who's passwords were cracked:", 'MATCH p=(n:Group)<-[:MemberOf*1..]-(m) WHERE n.objectid =~ "(?i)S-1-5-.*-519" AND m.owned = true RETURN m.samaccountname, m.domain ORDER BY m.samaccountname', []],
+                    ["Members of the Built-in Administrators Group who's passwords were cracked:", 'MATCH (n:User {owned: true} )-[b:MemberOf]->(c:Group ) WHERE c.objectid =~ "(?i).*S-1-5-32-544" RETURN n.samaccountname,n.domain ORDER BY n.samaccountname', []],
+                    ["Members of the Account Operators Group who's passwords were cracked:", 'MATCH (n:User {owned: true} )-[b:MemberOf]->(c:Group ) WHERE c.objectid =~ "(?i).*S-1-5-32-548" RETURN n.samaccountname,n.domain ORDER BY n.samaccountname', []]
+                ]
+                //MATCH p=(n:Group)<-[:MemberOf*1..]-(m) WHERE n.objectid =~ "(?i).*S-1-5-32-548" AND m.owned = true RETURN m.samaccountname, m.domain
+
+                var myheader = new Headers
+                myheader.set('Authorization', 'Basic ' + btoa(bh_username + ":" + bh_password));
+                myheader.set("Accept", "application/json;charset=UTF-8")
+                myheader.set("Content-Type", "application/json")
+
+                for (x in groups) {
+                    query.statements.push({ "statement": groups[x][1], })
+                }
+
+                await fetch(bh_URL + "/db/neo4j/tx/commit", {
+                    method: "POST",
+                    headers: myheader,
+                    body: JSON.stringify(query),
+                    cache: "default"
+                })
+                    .then(r => r.json())
+                    .then(r => {
+                        //Iterate though queryes
+                        for (x in r.results) {
+                            //Iterate though the results
+                            for (q in r.results[x]['data']) {
+                                UserName = r.results[x]['data'][q]['row'][0]
+                                Domain = r.results[x]['data'][q]['row'][1].toLowerCase()
+                                entry = `${Domain}\\${UserName}`
+                                groups[x][2].push(entry)
+                            }
+                        }
+
+                    }).catch(error => console.error('Error', error)
+                    )
+                return groups
+            }
+
+            async function Test_Bloodhound_Connection() {
+
+                var myheader = new Headers
+                myheader.set('Authorization', 'Basic ' + btoa(bh_username + ":" + bh_password));
+                myheader.set("Accept", "application/json;charset=UTF-8")
+                myheader.set("Content-Type", "application/json")
+                query = {
+                    "statements": [
+                        {
+                            "statement": "call dbms.components() yield name, versions, edition unwind versions as version return name, version, edition;",
+                            "parameters": {}
+                        }
+                    ]
+                }
+
+                await fetch(bh_URL + "/db/neo4j/tx/commit", {
+                    method: "POST",
+                    headers: myheader,
+                    body: JSON.stringify(query),
+                    cache: "default"
+                })
+                .then((responce) => {
+                    if (responce.status == 200){
+                        alert("Connected to Bloodhound!")
+                    }else{
+                        alert("Could Not Connect... Check Console for details")
+                    }
+                    console.log(responce)
+                }).catch((error) => {
+                    alert("Could not reach Neo4j. Is it running?")
+                })
+            }
+
+
+
+
+
+
+        </script>
+
+</body>
+
+</html>

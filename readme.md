@@ -113,3 +113,5 @@ Password patterns is done by replace leet characters with regular ones, and maki
 ### TODO
 - [ ] Regex parsing to ensure proper input
 - [ ] CSS
+- [ ] Add Section for cracked machine accounts.
+- [ ] Get User names from bloodhound for better name output (Administrator, Guest, krbtgt don't have domains from the secretsdump file)

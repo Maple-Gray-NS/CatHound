@@ -109,6 +109,10 @@ Password patterns is done by replace leet characters with regular ones, and maki
 **Example:**
 `P@55W0RD1` is turned into `passwordi`. CatHound will then attempt to find the word `password` with in this string. 
 
+### Change Log
+0.1.1
+- Added Count to each stat
+- Fix issue with Custom word list where null entires were counted
 
 ### TODO
 - [ ] Regex parsing to ensure proper input

@@ -247,6 +247,9 @@
                     custom_list_array = custom_wordlist.split(",")
                     for (x in custom_list_array) {
                         word = custom_list_array[x].trim().toLowerCase()
+                        if (word == ''){
+                            continue
+                        }
                         if (modifypassword.includes(word)) {
                             user_password_custom_wordlist.push(getUserName(processed_SecretsDump[SDEntry]))
                             break
@@ -305,22 +308,22 @@ Total Cracked Users: ${total_cracked_users}
 Total Unique User Passwords: ${total_cracked_uniq_password}
 
 ${BH_stats}
-Users with "password" variation in their password:
+Users with "password" variation in their password (${user_password_password.length}):
 ${user_password_password.join('\n')}
     
-Users with "welcome" variation in their password:
+Users with "welcome" variation in their password (${user_password_welcome.length}):
 ${user_password_welcome.join('\n')}
     
-Users with season variation in their password:
+Users with season variation in their password (${user_password_season.length}):
 ${user_password_season.join('\n')}
     
-Users with month variation in their password:
+Users with month variation in their password (${user_password_month.length}):
 ${user_password_month.join('\n')}
 
-Users with company name in their passwords:
+Users with company name in their passwords (${user_password_custom_wordlist.length}):
 ${user_password_custom_wordlist.join("\n")}
 
-Users with passwords that are shared with other accounts:
+Users with passwords that are shared with other accounts (${user_password_not_uniq.length}):
 ${user_password_not_uniq.join('\n')}`
             }
 

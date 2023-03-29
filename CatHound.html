@@ -290,7 +290,7 @@
                             continue
                         }
 
-                        BH_stats += `\n${BH_Owned_Users[x][0]}:\n${BH_Owned_Users[x][2].join('\n')}\n`
+                        BH_stats += `\n${BH_Owned_Users[x][0]} (${BH_Owned_Users[x][2].length}):\n${BH_Owned_Users[x][2].join('\n')}\n`
 
 
                     }
@@ -495,10 +495,10 @@ ${user_password_not_uniq.join('\n')}`
                 var finaltext = ""
 
                 var groups = [
-                    ["Members of the Domain Admins Group who's passwords were cracked:", 'MATCH p=(n:Group)<-[:MemberOf*1..]-(m) WHERE n.objectid =~ "(?i)S-1-5-.*-512" AND m.owned = true RETURN m.samaccountname, m.domain ORDER BY m.samaccountname', []],
-                    ["Members of the Enterprise Admins Group who's passwords were cracked:", 'MATCH p=(n:Group)<-[:MemberOf*1..]-(m) WHERE n.objectid =~ "(?i)S-1-5-.*-519" AND m.owned = true RETURN m.samaccountname, m.domain ORDER BY m.samaccountname', []],
-                    ["Members of the Built-in Administrators Group who's passwords were cracked:", 'MATCH (n:User {owned: true} )-[b:MemberOf]->(c:Group ) WHERE c.objectid =~ "(?i).*S-1-5-32-544" RETURN n.samaccountname,n.domain ORDER BY n.samaccountname', []],
-                    ["Members of the Account Operators Group who's passwords were cracked:", 'MATCH (n:User {owned: true} )-[b:MemberOf]->(c:Group ) WHERE c.objectid =~ "(?i).*S-1-5-32-548" RETURN n.samaccountname,n.domain ORDER BY n.samaccountname', []]
+                    ["Members of the Domain Admins Group who's passwords were cracked", 'MATCH p=(n:Group)<-[:MemberOf*1..]-(m) WHERE n.objectid =~ "(?i)S-1-5-.*-512" AND m.owned = true RETURN m.samaccountname, m.domain ORDER BY m.samaccountname', []],
+                    ["Members of the Enterprise Admins Group who's passwords were cracked", 'MATCH p=(n:Group)<-[:MemberOf*1..]-(m) WHERE n.objectid =~ "(?i)S-1-5-.*-519" AND m.owned = true RETURN m.samaccountname, m.domain ORDER BY m.samaccountname', []],
+                    ["Members of the Built-in Administrators Group who's passwords were cracked", 'MATCH (n:User {owned: true} )-[b:MemberOf]->(c:Group ) WHERE c.objectid =~ "(?i).*S-1-5-32-544" RETURN n.samaccountname,n.domain ORDER BY n.samaccountname', []],
+                    ["Members of the Account Operators Group who's passwords were cracked", 'MATCH (n:User {owned: true} )-[b:MemberOf]->(c:Group ) WHERE c.objectid =~ "(?i).*S-1-5-32-548" RETURN n.samaccountname,n.domain ORDER BY n.samaccountname', []]
                 ]
                 //MATCH p=(n:Group)<-[:MemberOf*1..]-(m) WHERE n.objectid =~ "(?i).*S-1-5-32-548" AND m.owned = true RETURN m.samaccountname, m.domain
 

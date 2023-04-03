@@ -1,5 +1,5 @@
 # CatHound
-A serverless hashcat parsing tool. Simplely run open the HTML file in your browser.
+A serverless hashcat parsing tool. Simply open the HTML file in your browser.
 
 ![CatHound](assets/screenshot.png)
 

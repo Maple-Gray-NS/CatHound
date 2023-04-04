@@ -242,10 +242,10 @@
                     total_users++
 
                     //No empty passwords or passwords that are not cracked
-                    if (processed_SecretsDump[SDEntry].Password == "") {
-                        continue
+                    if (processed_SecretsDump[SDEntry].Password != "") {
+                        total_cracked_users++
                     }
-                    total_cracked_users++
+                    
 
                     //Users with repeated password that are shared
                     //if (NonUniq_Passwords.includes(processed_SecretsDump[SDEntry].Password)) {

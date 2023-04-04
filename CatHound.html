@@ -200,7 +200,7 @@
                 var user_password_not_uniq = []
                 var user_LM_Hash_not_disabled = []
                 var NonUniq_Passwords = []
-                var NonUniq_NTHashes = []
+                
                 var All_NT_Hashes = []
                 var All_LM_Hashes = []
                 var BH_stats = ""
@@ -224,7 +224,7 @@
                 //Get uniq NT and LM Hashes
                 for (SDInitEntry in processed_SecretsDump) {
                     All_NT_Hashes.push(processed_SecretsDump[SDInitEntry].NTHash)
-                    
+
                     if (processed_SecretsDump[SDInitEntry].LMhash != "aad3b435b51404eeaad3b435b51404ee") {
                         All_LM_Hashes.push(processed_SecretsDump[SDInitEntry].LMhash)
                     }
@@ -353,6 +353,9 @@ ${user_password_month.join('\n')}
 
 Users with company name in their passwords (${user_password_custom_wordlist.length}):
 ${user_password_custom_wordlist.join("\n")}
+
+Users with Lan Manager (LM Hash) Enabled  (${user_LM_Hash_not_disabled.length}):
+${user_LM_Hash_not_disabled.join("\n")}
 
 Users with passwords that are shared with other accounts (${user_password_not_uniq.length}):
 ${user_password_not_uniq.join('\n')}`

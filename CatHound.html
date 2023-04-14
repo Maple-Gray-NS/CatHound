@@ -22,7 +22,8 @@
 
         <div name="RawData" class="row align-items-start">
             <div class="me-auto p-2">
-                <button type="button" class="btn btn-primary btn-sm float-end" onclick="Test_Bloodhound_Connection()">Test Bloodhound Connection</button>
+                <button type="button" class="btn btn-primary btn-sm float-end"
+                    onclick="Test_Bloodhound_Connection()">Test Bloodhound Connection</button>
             </div>
             <div class="col" name="SecretsDump">
                 <label for="SecretsDump_Data" class="form-label">SecretsDump Data</label>
@@ -197,11 +198,16 @@
                 var user_password_password = []
                 var user_password_season = []
                 var user_password_not_uniq = []
+                var user_LM_Hash_not_disabled = []
                 var NonUniq_Passwords = []
+                
+                var All_NT_Hashes = []
+                var All_LM_Hashes = []
                 var BH_stats = ""
+                var LMHash_Disabled = "aad3b435b51404eeaad3b435b51404ee"
 
                 // Process Hashcat Pot
-                //Remove entries that are $HEX[] format as those are defaults and won't actually work
+                // Remove entries that are $HEX[] format as those are defaults and won't actually work
                 for (HCEntry in processed_HashCatPot) {
                     if (!processed_HashCatPot[HCEntry].Password.includes("$HEX[")) {
                         total_cracked_uniq_password++
@@ -215,6 +221,17 @@
                     }
                 }
 
+                //Get uniq NT and LM Hashes
+                for (SDInitEntry in processed_SecretsDump) {
+                    All_NT_Hashes.push(processed_SecretsDump[SDInitEntry].NTHash)
+
+                    if (processed_SecretsDump[SDInitEntry].LMhash != "aad3b435b51404eeaad3b435b51404ee") {
+                        All_LM_Hashes.push(processed_SecretsDump[SDInitEntry].LMhash)
+                    }
+                }
+
+
+
 
                 // Process Dump 
                 for (SDEntry in processed_SecretsDump) {
@@ -225,15 +242,29 @@
                     total_users++
 
                     //No empty passwords or passwords that are not cracked
-                    if (processed_SecretsDump[SDEntry].Password == "") {
-                        continue
+                    if (processed_SecretsDump[SDEntry].Password != "") {
+                        total_cracked_users++
                     }
-                    total_cracked_users++
+                    
 
                     //Users with repeated password that are shared
-                    if (NonUniq_Passwords.includes(processed_SecretsDump[SDEntry].Password)) {
+                    //if (NonUniq_Passwords.includes(processed_SecretsDump[SDEntry].Password)) {
+                    //    user_password_not_uniq.push(getUserName(processed_SecretsDump[SDEntry]))
+                    //}
+
+                    if (countInArray(All_NT_Hashes, processed_SecretsDump[SDEntry].NTHash) > 1) {
                         user_password_not_uniq.push(getUserName(processed_SecretsDump[SDEntry]))
                     }
+
+
+                    //LM Hash is not disabled
+                    if (processed_SecretsDump[SDEntry].LMhash != LMHash_Disabled) {
+                        user_LM_Hash_not_disabled.push(getUserName(processed_SecretsDump[SDEntry]))
+                    }
+
+
+
+
 
 
 
@@ -247,7 +278,7 @@
                     custom_list_array = custom_wordlist.split(",")
                     for (x in custom_list_array) {
                         word = custom_list_array[x].trim().toLowerCase()
-                        if (word == ''){
+                        if (word == '') {
                             continue
                         }
                         if (modifypassword.includes(word)) {
@@ -322,6 +353,9 @@ ${user_password_month.join('\n')}
 
 Users with company name in their passwords (${user_password_custom_wordlist.length}):
 ${user_password_custom_wordlist.join("\n")}
+
+Users with Lan Manager (LM Hash) Enabled  (${user_LM_Hash_not_disabled.length}):
+${user_LM_Hash_not_disabled.join("\n")}
 
 Users with passwords that are shared with other accounts (${user_password_not_uniq.length}):
 ${user_password_not_uniq.join('\n')}`
@@ -468,6 +502,9 @@ ${user_password_not_uniq.join('\n')}`
                     )
 
             }
+            function countInArray(array, what) {
+                return array.filter(item => item == what).length;
+            }
 
             async function BH_GetOwnedUsers_HV_Group() {
                 // Owned Members of the Domain Admins Group    
@@ -556,16 +593,16 @@ ${user_password_not_uniq.join('\n')}`
                     body: JSON.stringify(query),
                     cache: "default"
                 })
-                .then((responce) => {
-                    if (responce.status == 200){
-                        alert("Connected to Bloodhound!")
-                    }else{
-                        alert("Could Not Connect... Check Console for details")
-                    }
-                    console.log(responce)
-                }).catch((error) => {
-                    alert("Could not reach Neo4j. Is it running?")
-                })
+                    .then((responce) => {
+                        if (responce.status == 200) {
+                            alert("Connected to Bloodhound!")
+                        } else {
+                            alert("Could Not Connect... Check Console for details")
+                        }
+                        console.log(responce)
+                    }).catch((error) => {
+                        alert("Could not reach Neo4j. Is it running?")
+                    })
             }
 
 

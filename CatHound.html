@@ -14,7 +14,7 @@
 <body>
     <script>
         var bh_username = "neo4j";
-        var bh_password = "password123"
+        var bh_password = "bloodhoundcommunityedition"
         var bh_URL = "http://localhost:7474"
     </script>
 
@@ -354,7 +354,7 @@ ${user_password_month.join('\n')}
 Users with company name in their passwords (${user_password_custom_wordlist.length}):
 ${user_password_custom_wordlist.join("\n")}
 
-Users with Lan Manager (LM Hash) Enabled  (${user_LM_Hash_not_disabled.length}):
+Users with Lan Manager (LM Hash) Enabled (${user_LM_Hash_not_disabled.length}):
 ${user_LM_Hash_not_disabled.join("\n")}
 
 Users with passwords that are shared with other accounts (${user_password_not_uniq.length}):
@@ -481,7 +481,7 @@ ${user_password_not_uniq.join('\n')}`
 
                     //console.log(`MATCH (n {samaccountname: '${processed_SecretsDump[i].User}'}) SET n.owned = true, n.password = '${processed_SecretsDump[i].Password}';`)
                     query.statements.push({
-                        "statement": (`MATCH (n {samaccountname: '${processed_SecretsDump[i].User}'}) SET n.owned = true, n.password = '${processed_SecretsDump[i].Password}';`),
+                        "statement": (`MATCH (n {samaccountname: '${processed_SecretsDump[i].User}'}) SET n.owned = true, n.system_tags = COALESCE(n.system_tags, []) + ['owned'], n.password = '${processed_SecretsDump[i].Password}';`),
                         "parameters": {}
                     })
                 }
